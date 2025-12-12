@@ -650,17 +650,21 @@
     function updateScore() { document.getElementById("scoreEl").innerText = score; }
     
     function resizeCanvas() {
-        // keep canvas drawing buffer sized to device pixels for crispness
-        const DPR = window.devicePixelRatio || 1;
-        canv.width = Math.round(window.innerWidth * DPR);
-        canv.height = Math.round(window.innerHeight * DPR);
+        canv.width = window.innerWidth;
+        canv.height = window.innerHeight;
         canv.style.width = '100vw';
         canv.style.height = '100vh';
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
         stars = []; 
-        for(let i=0; i<100; i++) stars.push({x: Math.random()*canv.width/DPR, y: Math.random()*canv.height/DPR, size: Math.random()*2, alpha: Math.random()});
+        for (let i = 0; i < 100; i++)
+            stars.push({
+                x: Math.random() * canv.width,
+                y: Math.random() * canv.height,
+                size: Math.random() * 2,
+                alpha: Math.random()
+            });
     }
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas);('resize', resizeCanvas);
 
     /* ========== BOOT & EVENT HOOKUP ========= */
     // attach UI event listeners now that functions exist
