@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GALAXY DEFENDER: FIXED</title>
+    <title>GALAXY DEFENDER: ULTIMATE</title>
     <style>
         body {
             margin: 0;
             background-color: #050505;
             overflow: hidden;
+            position: fixed; /* Prevents "bounce" on mobile */
+            width: 100%;
+            height: 100%;
             touch-action: none;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
@@ -56,35 +59,40 @@
 
         .paused-text { font-size: 50px; color: #fff; font-weight: bold; letter-spacing: 5px; }
 
+        /* MOBILE CONTROLS */
         #mobile-controls {
             display: none; 
             width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none;
         }
+        /* Show controls on touch devices */
         @media (pointer: coarse) { #mobile-controls { display: block; } }
 
+        /* JOYSTICK */
         .joystick-area {
-            position: absolute; bottom: 40px; left: 40px; width: 150px; height: 150px;
-            background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);
+            position: absolute; bottom: 50px; left: 30px; width: 160px; height: 160px;
+            background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%; pointer-events: auto; touch-action: none;
         }
         .stick {
-            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
+            position: absolute; top: 50%; left: 50%; width: 60px; height: 60px;
             background: rgba(0, 210, 255, 0.5); border-radius: 50%;
-            transform: translate(-50%, -50%); box-shadow: 0 0 10px #00d2ff; pointer-events: none;
+            transform: translate(-50%, -50%); box-shadow: 0 0 15px #00d2ff; pointer-events: none;
+            transition: transform 0.05s linear; /* Smooth micro-movements */
         }
 
+        /* BUTTONS */
         .action-area {
-            position: absolute; bottom: 40px; right: 40px; display: flex; gap: 20px; align-items: flex-end; pointer-events: none;
+            position: absolute; bottom: 50px; right: 30px; display: flex; gap: 25px; align-items: flex-end; pointer-events: none;
         }
         .btn-touch {
             pointer-events: auto; border-radius: 50%; color: white; font-weight: bold;
             display: flex; align-items: center; justify-content: center; user-select: none;
             touch-action: none; border: 2px solid rgba(255,255,255,0.5); backdrop-filter: blur(4px);
         }
-        .btn-shoot { width: 90px; height: 90px; background: rgba(255, 69, 0, 0.4); font-size: 18px; }
-        .btn-shoot:active { background: rgba(255, 69, 0, 0.8); }
-        .btn-warp { width: 60px; height: 60px; background: rgba(0, 210, 255, 0.4); font-size: 14px; margin-bottom: 15px; }
-        .btn-warp:active { background: rgba(0, 210, 255, 0.8); }
+        .btn-shoot { width: 90px; height: 90px; background: rgba(255, 69, 0, 0.4); font-size: 20px; }
+        .btn-shoot:active { background: rgba(255, 69, 0, 0.8); transform: scale(0.95); }
+        .btn-warp { width: 60px; height: 60px; background: rgba(0, 210, 255, 0.4); font-size: 14px; margin-bottom: 20px; }
+        .btn-warp:active { background: rgba(0, 210, 255, 0.8); transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -92,8 +100,9 @@
     <div id="start-screen">
         <h1>Galaxy Defender</h1>
         <p>
-            <b>Laptop:</b> Arrow Keys to Move, Space to Shoot, Shift to Warp.<br>
-            <b>Mobile:</b> Use On-Screen Joystick & Buttons.
+            <b>Laptop:</b> Arrows to Move, Space to Shoot.<br>
+            <b>Mobile:</b> Use Joystick & Buttons.<br>
+            (Rotate phone for best view)
         </p>
         <button class="start-btn" onclick="startGame()">PLAY GAME</button>
     </div>
@@ -126,6 +135,7 @@
     <canvas id="gameCanvas"></canvas>
 
 <script>
+    /** --- ASSETS --- */
     const SHIP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 2 L42 22 L62 36 L42 42 L42 54 L32 62 L22 54 L22 42 L2 36 L22 22 Z" fill="#e0e0e0" stroke="#333" stroke-width="2"/><path d="M32 2 L32 62" stroke="#999" stroke-width="1"/><path d="M22 42 L10 38 L22 28 Z" fill="#ff4500"/><path d="M42 42 L54 38 L42 28 Z" fill="#ff4500"/><circle cx="32" cy="28" r="4" fill="#00d2ff"/></svg>`;
     const ROID_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M10 20 L25 5 L45 10 L60 30 L50 55 L20 60 L5 40 Z" fill="#555" stroke="#222" stroke-width="2"/><path d="M15 25 L30 20 L25 40 Z" fill="#444"/><path d="M40 35 L50 45 L55 25 Z" fill="#333"/></svg>`;
     const UFO_SVG  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx="32" cy="32" rx="30" ry="12" fill="#d00" stroke="#fff" stroke-width="2"/><ellipse cx="32" cy="25" rx="15" ry="12" fill="#f00" stroke="#500" stroke-width="2"/><circle cx="15" cy="32" r="3" fill="#ff0"/><circle cx="32" cy="32" r="3" fill="#ff0"/><circle cx="49" cy="32" r="3" fill="#ff0"/></svg>`;
@@ -137,10 +147,9 @@
         return img;
     }
 
-    /* AUDIO */
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    /** --- AUDIO --- */
     let actx;
-    function initAudio() { if(!actx) actx = new AudioContext(); if(actx.state === 'suspended') actx.resume(); }
+    function initAudio() { if(!actx) actx = new AudioContext || window.webkitAudioContext; if(actx.state === 'suspended') actx.resume(); }
     function playSound(type) {
         if (!actx) return;
         const osc = actx.createOscillator();
@@ -169,7 +178,8 @@
         }
     }
 
-    const FPS = 60;
+    /** --- CONFIG --- */
+    const TARGET_FPS = 60; // Locked FPS
     const FRICTION = 0.7;
     const SHIP_SIZE = 40;
     const TURN_SPEED = 360;
@@ -189,11 +199,16 @@
     let gameRunning = false;
     let paused = false;
     let frameCount = 0;
-    let animationId; // KEY FIX: Track the loop ID
+    let animationId; 
+
+    // FPS THROTTLE VARS
+    let now, then, elapsed;
+    const fpsInterval = 1000 / TARGET_FPS;
 
     // INPUTS
     const input = { left: false, right: false, up: false, down: false };
 
+    /* --- EVENT LISTENERS --- */
     document.addEventListener("keydown", (ev) => {
         if(!gameRunning) return;
         switch(ev.keyCode) {
@@ -204,7 +219,7 @@
             case 32: shootLaser(); break;
             case 16: hyperSpace(); break;
             case 80: togglePause(); break;
-            case 13: if(ship.dead) newGame(); break; // Restart
+            case 13: if(ship.dead) newGame(); break; 
         }
     });
 
@@ -218,7 +233,7 @@
         }
     });
 
-    // Joystick
+    /* --- JOYSTICK LOGIC --- */
     const joystick = document.getElementById("joystick");
     const stick = document.getElementById("stick");
     let stickDrag = false;
@@ -237,9 +252,11 @@
         const cy = rect.top + rect.height/2;
         let dx = touch.clientX - cx;
         let dy = touch.clientY - cy;
+        
         const dist = Math.sqrt(dx*dx + dy*dy);
-        const maxDist = 35; 
+        const maxDist = 40; // Joystick range
         if(dist > maxDist) { dx *= maxDist/dist; dy *= maxDist/dist; }
+        
         stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
         input.right = dx > 10;
@@ -272,12 +289,17 @@
         paused = !paused;
         const pScreen = document.getElementById("pause-screen");
         const pBtn = document.getElementById("pause-btn");
-        if(paused) { pScreen.style.display = "flex"; pBtn.style.display = "none"; } 
-        else { pScreen.style.display = "none"; pBtn.style.display = "block"; animationId = requestAnimationFrame(update); }
+        if(paused) { 
+            pScreen.style.display = "flex"; pBtn.style.display = "none"; 
+            if(animationId) cancelAnimationFrame(animationId);
+        } else { 
+            pScreen.style.display = "none"; pBtn.style.display = "block"; 
+            then = Date.now(); // Reset time to avoid jump
+            gameLoop(); 
+        }
     }
 
     function newGame() {
-        // KEY FIX: STOP OLD LOOP
         if(animationId) cancelAnimationFrame(animationId);
         
         level = 0; lives = GAME_LIVES; score = 0;
@@ -288,8 +310,24 @@
         updateScore();
         document.getElementById("livesEl").innerText = lives;
         
-        // START NEW LOOP
-        animationId = requestAnimationFrame(update);
+        then = Date.now();
+        gameLoop();
+    }
+
+    /* --- MAIN GAME LOOP (THROTTLED) --- */
+    function gameLoop() {
+        if(!gameRunning || paused) return;
+        
+        animationId = requestAnimationFrame(gameLoop);
+
+        now = Date.now();
+        elapsed = now - then;
+
+        // Only update if enough time has passed (60 FPS Lock)
+        if (elapsed > fpsInterval) {
+            then = now - (elapsed % fpsInterval);
+            update();
+        }
     }
 
     function newShip() {
@@ -299,7 +337,7 @@
             r: SHIP_SIZE / 2, rot: 0,
             thrusting: false, reversing: false, thrust: { x: 0, y: 0 },
             canShoot: true, lasers: [], dead: false,
-            blinkNum: Math.ceil(SHIP_INV_DUR / 0.1), blinkTime: Math.ceil(0.1 * FPS),
+            blinkNum: Math.ceil(SHIP_INV_DUR / 0.1), blinkTime: Math.ceil(0.1 * TARGET_FPS),
             frozen: false, freezeTimer: 0, shield: false, tripleShot: 0 
         }
     }
@@ -317,8 +355,8 @@
     function newAsteroid(x, y, r) {
         return {
             x: x, y: y,
-            xv: Math.random() * ROID_SPD / FPS * (Math.random() < 0.5 ? 1 : -1) * (1 + level*0.1),
-            yv: Math.random() * ROID_SPD / FPS * (Math.random() < 0.5 ? 1 : -1) * (1 + level*0.1),
+            xv: Math.random() * ROID_SPD / TARGET_FPS * (Math.random() < 0.5 ? 1 : -1) * (1 + level*0.1),
+            yv: Math.random() * ROID_SPD / TARGET_FPS * (Math.random() < 0.5 ? 1 : -1) * (1 + level*0.1),
             r: r, a: Math.random() * Math.PI * 2, rotVel: (Math.random() - 0.5) * 0.05
         };
     }
@@ -328,18 +366,18 @@
         ufo.active = true;
         ufo.x = Math.random() < 0.5 ? -50 : canv.width + 50;
         ufo.y = Math.random() * canv.height;
-        ufo.xv = (ufo.x < 0 ? 1 : -1) * 100 / FPS;
+        ufo.xv = (ufo.x < 0 ? 1 : -1) * 100 / TARGET_FPS;
         ufo.bullets = [];
     }
 
     function shootLaser() {
         if(paused || ship.dead || ship.frozen) return;
         if (ship.canShoot && ship.lasers.length < 15) {
-            ship.lasers.push({ x: ship.x + ship.r * Math.cos(ship.a), y: ship.y + ship.r * Math.sin(ship.a), xv: LASER_SPD * Math.cos(ship.a) / FPS, yv: LASER_SPD * Math.sin(ship.a) / FPS, dist: 0 });
+            ship.lasers.push({ x: ship.x + ship.r * Math.cos(ship.a), y: ship.y + ship.r * Math.sin(ship.a), xv: LASER_SPD * Math.cos(ship.a) / TARGET_FPS, yv: LASER_SPD * Math.sin(ship.a) / TARGET_FPS, dist: 0 });
             if(ship.tripleShot > 0) {
                 let a1 = ship.a - 0.2; let a2 = ship.a + 0.2; 
-                ship.lasers.push({ x: ship.x + ship.r * Math.cos(a1), y: ship.y + ship.r * Math.sin(a1), xv: LASER_SPD * Math.cos(a1) / FPS, yv: LASER_SPD * Math.sin(a1) / FPS, dist: 0 });
-                ship.lasers.push({ x: ship.x + ship.r * Math.cos(a2), y: ship.y + ship.r * Math.sin(a2), xv: LASER_SPD * Math.cos(a2) / FPS, yv: LASER_SPD * Math.sin(a2) / FPS, dist: 0 });
+                ship.lasers.push({ x: ship.x + ship.r * Math.cos(a1), y: ship.y + ship.r * Math.sin(a1), xv: LASER_SPD * Math.cos(a1) / TARGET_FPS, yv: LASER_SPD * Math.sin(a1) / TARGET_FPS, dist: 0 });
+                ship.lasers.push({ x: ship.x + ship.r * Math.cos(a2), y: ship.y + ship.r * Math.sin(a2), xv: LASER_SPD * Math.cos(a2) / TARGET_FPS, yv: LASER_SPD * Math.sin(a2) / TARGET_FPS, dist: 0 });
             }
             playSound('shoot');
         }
@@ -368,9 +406,9 @@
     function distBetweenPoints(x1, y1, x2, y2) { return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)); }
 
     function update() {
-        if(!gameRunning || paused) return;
         frameCount++;
 
+        // Draw
         ctx.fillStyle = "black"; ctx.fillRect(0, 0, canv.width, canv.height);
         ctx.fillStyle = "white"; stars.forEach(s => { ctx.globalAlpha = s.alpha; ctx.fillRect(s.x, s.y, s.size, s.size); });
         ctx.globalAlpha = 1.0;
@@ -379,8 +417,8 @@
             document.getElementById("powerup-msg").style.display = (ship.tripleShot-- > 0) ? "block" : "none";
 
             if(!ship.frozen) {
-                if(input.left) ship.rot = -TURN_SPEED / 180 * Math.PI / FPS;
-                else if(input.right) ship.rot = TURN_SPEED / 180 * Math.PI / FPS;
+                if(input.left) ship.rot = -TURN_SPEED / 180 * Math.PI / TARGET_FPS;
+                else if(input.right) ship.rot = TURN_SPEED / 180 * Math.PI / TARGET_FPS;
                 else ship.rot = 0;
 
                 ship.thrusting = input.up;
@@ -388,29 +426,29 @@
             }
 
             if(ship.frozen) {
-                ship.freezeTimer -= 1/FPS;
+                ship.freezeTimer -= 1/TARGET_FPS;
                 if(ship.freezeTimer <= 0) { ship.frozen = false; document.getElementById("frozen-msg").style.display = "none"; }
             } else {
                 ship.a += ship.rot;
                 ship.x += ship.thrust.x; ship.y += ship.thrust.y;
                 
                 if(ship.thrusting) {
-                    ship.thrust.x += THRUST * Math.cos(ship.a) / FPS; 
-                    ship.thrust.y += THRUST * Math.sin(ship.a) / FPS;
+                    ship.thrust.x += THRUST * Math.cos(ship.a) / TARGET_FPS; 
+                    ship.thrust.y += THRUST * Math.sin(ship.a) / TARGET_FPS;
                     if(ship.blinkNum % 2 == 0) playSound('thrust');
                 } else if(ship.reversing) {
-                    ship.thrust.x -= (THRUST * 2.0) * Math.cos(ship.a) / FPS; 
-                    ship.thrust.y -= (THRUST * 2.0) * Math.sin(ship.a) / FPS;
+                    ship.thrust.x -= (THRUST * 2.0) * Math.cos(ship.a) / TARGET_FPS; 
+                    ship.thrust.y -= (THRUST * 2.0) * Math.sin(ship.a) / TARGET_FPS;
                 } else {
-                    ship.thrust.x -= FRICTION * ship.thrust.x / FPS; 
-                    ship.thrust.y -= FRICTION * ship.thrust.y / FPS;
+                    ship.thrust.x -= FRICTION * ship.thrust.x / TARGET_FPS; 
+                    ship.thrust.y -= FRICTION * ship.thrust.y / TARGET_FPS;
                 }
             }
             
             if (ship.x < -20) ship.x = canv.width + 20; else if (ship.x > canv.width + 20) ship.x = -20;
             if (ship.y < -20) ship.y = canv.height + 20; else if (ship.y > canv.height + 20) ship.y = -20;
 
-            if(ship.blinkNum > 0) { ship.blinkTime--; if(ship.blinkTime == 0) { ship.blinkTime = Math.ceil(0.1*FPS); ship.blinkNum--; } }
+            if(ship.blinkNum > 0) { ship.blinkTime--; if(ship.blinkTime == 0) { ship.blinkTime = Math.ceil(0.1*TARGET_FPS); ship.blinkNum--; } }
             
             if(ship.blinkNum % 2 == 0) {
                 ctx.save(); ctx.translate(ship.x, ship.y); ctx.rotate(ship.a + Math.PI/2);
@@ -434,6 +472,7 @@
             }
         }
 
+        // Entities
         for(let i=powerups.length-1; i>=0; i--) {
             let p = powerups[i];
             ctx.fillStyle = p.type == 'S' ? '#00f' : '#ff0';
@@ -461,11 +500,18 @@
             ctx.drawImage(ufoImg, ufo.x - 25, ufo.y - 15, 50, 30);
             ufo.x += ufo.xv;
             if(ufo.x < -100 || ufo.x > canv.width + 100) ufo.active = false;
+            
             if(Math.random() < 0.01) {
-                let ang = (Math.random() < 0.6) ? Math.atan2(ship.y - ufo.y, ship.x - ufo.x) : Math.random() * Math.PI * 2;
-                ufo.bullets.push({ x: ufo.x, y: ufo.y, xv: 300*Math.cos(ang)/FPS, yv: 300*Math.sin(ang)/FPS });
+                let ang;
+                if(Math.random() < 0.3) { // 30% AIMED
+                    ang = Math.atan2(ship.y - ufo.y, ship.x - ufo.x);
+                } else { // 70% RANDOM
+                    ang = Math.random() * Math.PI * 2;
+                }
+                ufo.bullets.push({ x: ufo.x, y: ufo.y, xv: 300*Math.cos(ang)/TARGET_FPS, yv: 300*Math.sin(ang)/TARGET_FPS });
                 playSound('shoot');
             }
+
             if(!ship.dead && ship.blinkNum == 0 && distBetweenPoints(ship.x, ship.y, ufo.x, ufo.y) < ship.r + 20) {
                 createParticles(ufo.x, ufo.y, "red"); ufo.active = false;
                 if(ship.shield) { ship.shield = false; playSound('bang'); } else playerHit();
@@ -511,10 +557,12 @@
 
         if(lives <= 0) {
             ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "40px Arial"; ctx.fillText("GAME OVER", canv.width/2, canv.height/2);
-            ctx.font = "20px Arial"; ctx.fillText("Tap to Restart", canv.width/2, canv.height/2+40);
-            if(input.left || input.right || input.up || input.down) newGame(); 
+            ctx.font = "20px Arial"; ctx.fillText("Tap / Enter to Restart", canv.width/2, canv.height/2+40);
+            
+            if(input.left || input.right || input.up || input.down) {
+               newGame();
+            }
         }
-        animationId = requestAnimationFrame(update);
     }
 
     function destroyRoid(i) {
