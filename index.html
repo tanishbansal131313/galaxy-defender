@@ -497,15 +497,18 @@
                 ship.x += ship.thrust.x; ship.y += ship.thrust.y;
                 
                 if(ship.thrusting) {
-                    ship.thrust.x += THRUST * Math.cos(ship.a) / TARGET_FPS; 
-                    ship.thrust.y += THRUST * Math.sin(ship.a) / TARGET_FPS;
+                    // Upward thrust at 0.5x strength
+                    ship.thrust.x += (THRUST * 0.5) * Math.cos(ship.a) / TARGET_FPS;
+                    ship.thrust.y += (THRUST * 0.5) * Math.sin(ship.a) / TARGET_FPS;
                     if(ship.blinkNum % 2 == 0) playSound('thrust');
                 } else if(ship.reversing) {
-                    ship.thrust.x -= (THRUST * 2.0) * Math.cos(ship.a) / TARGET_FPS; 
-                    ship.thrust.y -= (THRUST * 2.0) * Math.sin(ship.a) / TARGET_FPS;
+                    // Downward thrust at 0.5x strength
+                    ship.thrust.x -= (THRUST * 0.5) * Math.cos(ship.a) / TARGET_FPS;
+                    ship.thrust.y -= (THRUST * 0.5) * Math.sin(ship.a) / TARGET_FPS;
                 } else {
-                    ship.thrust.x -= FRICTION * ship.thrust.x / TARGET_FPS; 
-                    ship.thrust.y -= FRICTION * ship.thrust.y / TARGET_FPS;
+                    // Immediate stop when no input
+                    ship.thrust.x = 0;
+                    ship.thrust.y = 0;
                 }
             }
             
