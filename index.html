@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GALAXY DEFENDER: ULTIMATE</title>
+    <title>GALAXY DEFENDER: FINAL COMPLETE</title>
     <style>
         body {
             margin: 0;
-            background-color: #050505;
+            background-color: #000;
             overflow: hidden;
-            position: fixed; /* Prevents "bounce" on mobile */
+            position: fixed;
             width: 100%;
             height: 100%;
             touch-action: none;
@@ -21,25 +21,42 @@
             display: block;
             background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
         }
+
+        /* RETRO SCANLINE EFFECT */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            z-index: 5;
+            pointer-events: none;
+        }
         
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
             display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 10;
         }
 
         #top-bar {
-            padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none;
+            padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: auto;
         }
         .stat-box { font-size: 18px; color: #fff; text-shadow: 1px 1px 0 #000; font-weight: bold; margin-bottom: 5px; }
         #frozen-msg { color: #0ff; font-weight: bold; display: none; text-shadow: 0 0 10px #0ff; font-size: 20px; animation: blink 0.5s infinite; }
         #powerup-msg { color: #ff0; font-weight: bold; display: none; animation: blink 0.5s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        #pause-btn {
-            pointer-events: auto; background: rgba(255, 255, 255, 0.2); border: 2px solid #fff;
-            color: #fff; font-weight: bold; padding: 10px 15px; border-radius: 5px; cursor: pointer; backdrop-filter: blur(4px);
+        /* UI BUTTONS */
+        .ui-btn {
+            background: rgba(255, 255, 255, 0.15); border: 1px solid #fff;
+            color: #fff; font-weight: bold; padding: 8px 12px; border-radius: 5px; 
+            cursor: pointer; backdrop-filter: blur(4px); margin-left: 10px;
+            font-size: 14px; text-transform: uppercase; pointer-events: auto;
         }
+        .ui-btn:active { background: rgba(255, 255, 255, 0.4); }
 
         #start-screen, #pause-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -59,40 +76,35 @@
 
         .paused-text { font-size: 50px; color: #fff; font-weight: bold; letter-spacing: 5px; }
 
-        /* MOBILE CONTROLS */
         #mobile-controls {
             display: none; 
             width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none;
         }
-        /* Show controls on touch devices */
         @media (pointer: coarse) { #mobile-controls { display: block; } }
 
-        /* JOYSTICK */
         .joystick-area {
-            position: absolute; bottom: 50px; left: 30px; width: 160px; height: 160px;
+            position: absolute; bottom: 60px; left: 40px; width: 150px; height: 150px;
             background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%; pointer-events: auto; touch-action: none;
         }
         .stick {
-            position: absolute; top: 50%; left: 50%; width: 60px; height: 60px;
+            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
             background: rgba(0, 210, 255, 0.5); border-radius: 50%;
-            transform: translate(-50%, -50%); box-shadow: 0 0 15px #00d2ff; pointer-events: none;
-            transition: transform 0.05s linear; /* Smooth micro-movements */
+            transform: translate(-50%, -50%); box-shadow: 0 0 10px #00d2ff; pointer-events: none;
         }
 
-        /* BUTTONS */
         .action-area {
-            position: absolute; bottom: 50px; right: 30px; display: flex; gap: 25px; align-items: flex-end; pointer-events: none;
+            position: absolute; bottom: 60px; right: 40px; display: flex; gap: 20px; align-items: flex-end; pointer-events: none;
         }
         .btn-touch {
             pointer-events: auto; border-radius: 50%; color: white; font-weight: bold;
             display: flex; align-items: center; justify-content: center; user-select: none;
             touch-action: none; border: 2px solid rgba(255,255,255,0.5); backdrop-filter: blur(4px);
         }
-        .btn-shoot { width: 90px; height: 90px; background: rgba(255, 69, 0, 0.4); font-size: 20px; }
-        .btn-shoot:active { background: rgba(255, 69, 0, 0.8); transform: scale(0.95); }
-        .btn-warp { width: 60px; height: 60px; background: rgba(0, 210, 255, 0.4); font-size: 14px; margin-bottom: 20px; }
-        .btn-warp:active { background: rgba(0, 210, 255, 0.8); transform: scale(0.95); }
+        .btn-shoot { width: 90px; height: 90px; background: rgba(255, 69, 0, 0.4); font-size: 18px; }
+        .btn-shoot:active { background: rgba(255, 69, 0, 0.8); }
+        .btn-warp { width: 60px; height: 60px; background: rgba(0, 210, 255, 0.4); font-size: 14px; margin-bottom: 15px; }
+        .btn-warp:active { background: rgba(0, 210, 255, 0.8); }
     </style>
 </head>
 <body>
@@ -100,9 +112,9 @@
     <div id="start-screen">
         <h1>Galaxy Defender</h1>
         <p>
-            <b>Laptop:</b> Arrows to Move, Space to Shoot.<br>
+            <b>Laptop:</b> Arrow Keys to Move, Space to Shoot.<br>
             <b>Mobile:</b> Use Joystick & Buttons.<br>
-            (Rotate phone for best view)
+            Tap "Fullscreen" for best experience!
         </p>
         <button class="start-btn" onclick="startGame()">PLAY GAME</button>
     </div>
@@ -120,7 +132,10 @@
                 <div id="frozen-msg">❄️ FROZEN! ❄️</div>
                 <div id="powerup-msg">TRIPLE SHOT!</div>
             </div>
-            <button id="pause-btn" onclick="togglePause()">❚❚ PAUSE</button>
+            <div style="display:flex;">
+                <button class="ui-btn" onclick="goFullscreen()">⛶ FULLSCREEN</button>
+                <button class="ui-btn" onclick="togglePause()">❚❚ PAUSE</button>
+            </div>
         </div>
 
         <div id="mobile-controls">
@@ -135,7 +150,6 @@
     <canvas id="gameCanvas"></canvas>
 
 <script>
-    /** --- ASSETS --- */
     const SHIP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 2 L42 22 L62 36 L42 42 L42 54 L32 62 L22 54 L22 42 L2 36 L22 22 Z" fill="#e0e0e0" stroke="#333" stroke-width="2"/><path d="M32 2 L32 62" stroke="#999" stroke-width="1"/><path d="M22 42 L10 38 L22 28 Z" fill="#ff4500"/><path d="M42 42 L54 38 L42 28 Z" fill="#ff4500"/><circle cx="32" cy="28" r="4" fill="#00d2ff"/></svg>`;
     const ROID_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M10 20 L25 5 L45 10 L60 30 L50 55 L20 60 L5 40 Z" fill="#555" stroke="#222" stroke-width="2"/><path d="M15 25 L30 20 L25 40 Z" fill="#444"/><path d="M40 35 L50 45 L55 25 Z" fill="#333"/></svg>`;
     const UFO_SVG  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx="32" cy="32" rx="30" ry="12" fill="#d00" stroke="#fff" stroke-width="2"/><ellipse cx="32" cy="25" rx="15" ry="12" fill="#f00" stroke="#500" stroke-width="2"/><circle cx="15" cy="32" r="3" fill="#ff0"/><circle cx="32" cy="32" r="3" fill="#ff0"/><circle cx="49" cy="32" r="3" fill="#ff0"/></svg>`;
@@ -147,7 +161,6 @@
         return img;
     }
 
-    /** --- AUDIO --- */
     let actx;
     function initAudio() { if(!actx) actx = new AudioContext || window.webkitAudioContext; if(actx.state === 'suspended') actx.resume(); }
     function playSound(type) {
@@ -178,8 +191,7 @@
         }
     }
 
-    /** --- CONFIG --- */
-    const TARGET_FPS = 60; // Locked FPS
+    const TARGET_FPS = 60;
     const FRICTION = 0.7;
     const SHIP_SIZE = 40;
     const TURN_SPEED = 360;
@@ -188,6 +200,10 @@
     const ROID_SPD = 50;
     const GAME_LIVES = 3;
     const SHIP_INV_DUR = 3; 
+
+    /* DEVICE DETECTION */
+    const IS_MOBILE = window.innerWidth < 800;
+    const ROID_SIZE_BASE = IS_MOBILE ? 45 : 90; // Smaller rocks on mobile
 
     const canv = document.getElementById("gameCanvas");
     const ctx = canv.getContext("2d");
@@ -200,15 +216,25 @@
     let paused = false;
     let frameCount = 0;
     let animationId; 
-
-    // FPS THROTTLE VARS
     let now, then, elapsed;
     const fpsInterval = 1000 / TARGET_FPS;
 
-    // INPUTS
     const input = { left: false, right: false, up: false, down: false };
 
-    /* --- EVENT LISTENERS --- */
+    /* FULLSCREEN FUNCTION */
+    function goFullscreen() {
+        const elem = document.documentElement;
+        if (!document.fullscreenElement) {
+            if(elem.requestFullscreen) { elem.requestFullscreen(); }
+            else if(elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(e => console.log("Lock not supported"));
+            }
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
     document.addEventListener("keydown", (ev) => {
         if(!gameRunning) return;
         switch(ev.keyCode) {
@@ -233,7 +259,6 @@
         }
     });
 
-    /* --- JOYSTICK LOGIC --- */
     const joystick = document.getElementById("joystick");
     const stick = document.getElementById("stick");
     let stickDrag = false;
@@ -254,13 +279,15 @@
         let dy = touch.clientY - cy;
         
         const dist = Math.sqrt(dx*dx + dy*dy);
-        const maxDist = 40; // Joystick range
+        const maxDist = 35; 
         if(dist > maxDist) { dx *= maxDist/dist; dy *= maxDist/dist; }
-        
         stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
-        input.right = dx > 10;
-        input.left = dx < -10;
+        const DEADZONE_X = 15;
+        
+        if (dx > DEADZONE_X) input.right = true; else input.right = false;
+        if (dx < -DEADZONE_X) input.left = true; else input.left = false;
+        
         input.up = dy < -10;
         input.down = dy > 10;
     }
@@ -288,13 +315,12 @@
         if(!gameRunning) return;
         paused = !paused;
         const pScreen = document.getElementById("pause-screen");
-        const pBtn = document.getElementById("pause-btn");
         if(paused) { 
-            pScreen.style.display = "flex"; pBtn.style.display = "none"; 
+            pScreen.style.display = "flex"; 
             if(animationId) cancelAnimationFrame(animationId);
         } else { 
-            pScreen.style.display = "none"; pBtn.style.display = "block"; 
-            then = Date.now(); // Reset time to avoid jump
+            pScreen.style.display = "none"; 
+            then = Date.now();
             gameLoop(); 
         }
     }
@@ -314,16 +340,13 @@
         gameLoop();
     }
 
-    /* --- MAIN GAME LOOP (THROTTLED) --- */
     function gameLoop() {
         if(!gameRunning || paused) return;
         
         animationId = requestAnimationFrame(gameLoop);
-
         now = Date.now();
         elapsed = now - then;
 
-        // Only update if enough time has passed (60 FPS Lock)
         if (elapsed > fpsInterval) {
             then = now - (elapsed % fpsInterval);
             update();
@@ -348,7 +371,7 @@
             let x, y;
             do { x = Math.floor(Math.random() * canv.width); y = Math.floor(Math.random() * canv.height); } 
             while (distBetweenPoints(ship.x, ship.y, x, y) < 200);
-            roids.push(newAsteroid(x, y, Math.ceil(90 / 2)));
+            roids.push(newAsteroid(x, y, Math.ceil(ROID_SIZE_BASE / 2)));
         }
     }
 
@@ -408,7 +431,6 @@
     function update() {
         frameCount++;
 
-        // Draw
         ctx.fillStyle = "black"; ctx.fillRect(0, 0, canv.width, canv.height);
         ctx.fillStyle = "white"; stars.forEach(s => { ctx.globalAlpha = s.alpha; ctx.fillRect(s.x, s.y, s.size, s.size); });
         ctx.globalAlpha = 1.0;
@@ -472,7 +494,6 @@
             }
         }
 
-        // Entities
         for(let i=powerups.length-1; i>=0; i--) {
             let p = powerups[i];
             ctx.fillStyle = p.type == 'S' ? '#00f' : '#ff0';
