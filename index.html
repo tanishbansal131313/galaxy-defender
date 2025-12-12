@@ -19,6 +19,8 @@
         }
         canvas {
             display: block;
+            width: 100vw;
+            height: 100vh;
             background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
         }
 
@@ -116,12 +118,12 @@
             <b>Mobile:</b> Use Joystick & Buttons.<br>
             Tap "Fullscreen" for best experience!
         </p>
-        <button class="start-btn" onclick="startGame()">PLAY GAME</button>
+        <button class="start-btn" id="startBtn">PLAY GAME</button>
     </div>
 
     <div id="pause-screen">
         <div class="paused-text">PAUSED</div>
-        <button class="start-btn" style="margin-top: 20px; font-size: 18px;" onclick="togglePause()">RESUME</button>
+        <button class="start-btn" id="pauseResumeBtn" style="margin-top: 20px; font-size: 18px;">RESUME</button>
     </div>
 
     <div id="ui-layer">
@@ -133,8 +135,8 @@
                 <div id="powerup-msg">TRIPLE SHOT!</div>
             </div>
             <div style="display:flex;">
-                <button class="ui-btn" onclick="goFullscreen()">⛶ FULLSCREEN</button>
-                <button class="ui-btn" onclick="togglePause()">❚❚ PAUSE</button>
+                <button class="ui-btn" id="fullscreenBtn">⛶ FULLSCREEN</button>
+                <button class="ui-btn" id="pauseBtn">❚❚ PAUSE</button>
             </div>
         </div>
 
@@ -162,7 +164,12 @@
     }
 
     let actx;
-    function initAudio() { if(!actx) actx = new AudioContext || window.webkitAudioContext; if(actx.state === 'suspended') actx.resume(); }
+    function initAudio() { 
+        try {
+            if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+            if (actx && actx.state === 'suspended') actx.resume();
+        } catch(e) { console.warn('Audio not available', e); actx = null; }
+    }
     function playSound(type) {
         if (!actx) return;
         const osc = actx.createOscillator();
@@ -194,16 +201,18 @@
     const TARGET_FPS = 60;
     const FRICTION = 0.7;
     const SHIP_SIZE = 40;
-    const TURN_SPEED = 360;
+    const TURN_SPEED_DESKTOP = 360;
+    const TURN_SPEED_MOBILE = 220; // smoother on mobile
     const THRUST = 5;
     const LASER_SPD = 600;
-    const ROID_SPD = 50;
+    let ROID_SPD = 50; // may be reduced on mobile below
     const GAME_LIVES = 3;
     const SHIP_INV_DUR = 3; 
 
     /* DEVICE DETECTION */
     const IS_MOBILE = window.innerWidth < 800;
-    const ROID_SIZE_BASE = IS_MOBILE ? 45 : 90; // Smaller rocks on mobile
+    const ROID_SIZE_BASE = IS_MOBILE ? 30 : 90; // much smaller rocks on mobile
+    if (IS_MOBILE) ROID_SPD = 35; // slower asteroids on phone
 
     const canv = document.getElementById("gameCanvas");
     const ctx = canv.getContext("2d");
@@ -221,19 +230,36 @@
 
     const input = { left: false, right: false, up: false, down: false };
 
-    /* FULLSCREEN FUNCTION */
+    /* FULLSCREEN FUNCTION (improved) */
     function goFullscreen() {
         const elem = document.documentElement;
-        if (!document.fullscreenElement) {
-            if(elem.requestFullscreen) { elem.requestFullscreen(); }
-            else if(elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(e => console.log("Lock not supported"));
-            }
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
+        // try to lock orientation on supported devices
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(()=>{});
         }
+        if (elem.requestFullscreen) elem.requestFullscreen(); else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
     }
+
+    // when entering/exiting fullscreen update canvas styling to take full viewport
+    document.addEventListener('fullscreenchange', () => {
+        if(document.fullscreenElement) {
+            document.body.style.width = '100vw';
+            document.body.style.height = '100vh';
+            canv.style.width = '100vw'; canv.style.height = '100vh';
+            resizeCanvas();
+            // on mobile hide pause button (user wanted only fullscreen button)
+            const pauseBtn = document.getElementById('pauseBtn');
+            if(IS_MOBILE && pauseBtn) pauseBtn.style.display = 'none';
+        } else {
+            // restore
+            document.body.style.width = '';
+            document.body.style.height = '';
+            canv.style.width = '100vw'; canv.style.height = '100vh';
+            resizeCanvas();
+            const pauseBtn = document.getElementById('pauseBtn');
+            if(pauseBtn) pauseBtn.style.display = '';
+        }
+    });
 
     document.addEventListener("keydown", (ev) => {
         if(!gameRunning) return;
@@ -263,9 +289,11 @@
     const stick = document.getElementById("stick");
     let stickDrag = false;
 
-    joystick.addEventListener('touchstart', startStick, {passive: false});
-    joystick.addEventListener('touchmove', moveStick, {passive: false});
-    joystick.addEventListener('touchend', endStick, {passive: false});
+    if (joystick) {
+        joystick.addEventListener('touchstart', startStick, {passive: false});
+        joystick.addEventListener('touchmove', moveStick, {passive: false});
+        joystick.addEventListener('touchend', endStick, {passive: false});
+    }
 
     function startStick(e) { stickDrag = true; moveStick(e); }
     function moveStick(e) {
@@ -279,17 +307,14 @@
         let dy = touch.clientY - cy;
         
         const dist = Math.sqrt(dx*dx + dy*dy);
-        const maxDist = 35; 
+        const maxDist = 45; 
         if(dist > maxDist) { dx *= maxDist/dist; dy *= maxDist/dist; }
         stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
-        const DEADZONE_X = 15;
-        
+        const DEADZONE_X = 12; // tighter deadzone for mobile
         if (dx > DEADZONE_X) input.right = true; else input.right = false;
         if (dx < -DEADZONE_X) input.left = true; else input.left = false;
-        
-        input.up = dy < -10;
-        input.down = dy > 10;
+        input.up = dy < -8; input.down = dy > 8;
     }
     function endStick(e) {
         stickDrag = false;
@@ -297,9 +322,14 @@
         input.left = input.right = input.up = input.down = false;
     }
 
-    document.getElementById("btn-shoot").addEventListener('touchstart', (e) => { e.preventDefault(); shootLaser(); }, {passive: false});
-    document.getElementById("btn-warp").addEventListener('touchstart', (e) => { e.preventDefault(); hyperSpace(); }, {passive: false});
+    const shootBtn = document.getElementById("btn-shoot");
+    const warpBtn = document.getElementById("btn-warp");
 
+    if (shootBtn) shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); shootLaser(); }, {passive: false});
+    if (warpBtn) warpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); hyperSpace(); }, {passive: false});
+
+    // --- smoother rotation: use rotTarget and lerp to avoid sudden spinning ---
+    function lerp(a,b,t){ return a + (b-a) * Math.max(0,Math.min(1,t)); }
 
     function startGame() {
         document.getElementById("start-screen").style.display = "none";
@@ -309,6 +339,9 @@
         gameRunning = true;
         paused = false;
         newGame();
+
+        // On mobile, hide unnecessary top bar buttons to give user single fullscreen button if they asked
+        if(IS_MOBILE){ const pauseBtn = document.getElementById('pauseBtn'); if(pauseBtn) pauseBtn.style.display = 'none'; }
     }
 
     function togglePause() {
@@ -357,7 +390,7 @@
         return {
             x: canv.width / 2, y: canv.height / 2,
             a: 270 / 180 * Math.PI,
-            r: SHIP_SIZE / 2, rot: 0,
+            r: SHIP_SIZE / 2, rot: 0, rotTarget: 0,
             thrusting: false, reversing: false, thrust: { x: 0, y: 0 },
             canShoot: true, lasers: [], dead: false,
             blinkNum: Math.ceil(SHIP_INV_DUR / 0.1), blinkTime: Math.ceil(0.1 * TARGET_FPS),
@@ -367,7 +400,8 @@
 
     function createAsteroidBelt() {
         roids = [];
-        for (let i = 0; i < 4 + level; i++) {
+        const count = IS_MOBILE ? Math.max(2, 3 + level - 1) : (4 + level);
+        for (let i = 0; i < count; i++) {
             let x, y;
             do { x = Math.floor(Math.random() * canv.width); y = Math.floor(Math.random() * canv.height); } 
             while (distBetweenPoints(ship.x, ship.y, x, y) < 200);
@@ -405,7 +439,7 @@
             playSound('shoot');
         }
         ship.canShoot = false;
-        setTimeout(() => ship.canShoot = true, 200); 
+        setTimeout(() => ship.canShoot = true, 200);
     }
 
     function hyperSpace() {
@@ -435,13 +469,21 @@
         ctx.fillStyle = "white"; stars.forEach(s => { ctx.globalAlpha = s.alpha; ctx.fillRect(s.x, s.y, s.size, s.size); });
         ctx.globalAlpha = 1.0;
 
+        // rotation speed selection
+        const TURN_SPEED = IS_MOBILE ? TURN_SPEED_MOBILE : TURN_SPEED_DESKTOP;
+        const rotPerFrame = TURN_SPEED / 180 * Math.PI / TARGET_FPS;
+
         if (!ship.dead) {
             document.getElementById("powerup-msg").style.display = (ship.tripleShot-- > 0) ? "block" : "none";
 
             if(!ship.frozen) {
-                if(input.left) ship.rot = -TURN_SPEED / 180 * Math.PI / TARGET_FPS;
-                else if(input.right) ship.rot = TURN_SPEED / 180 * Math.PI / TARGET_FPS;
-                else ship.rot = 0;
+                // use rotTarget for smoothing
+                if(input.left) ship.rotTarget = -rotPerFrame;
+                else if(input.right) ship.rotTarget = rotPerFrame;
+                else ship.rotTarget = 0;
+
+                // lerp actual rot towards target for smooth turning
+                ship.rot = lerp(ship.rot, ship.rotTarget, IS_MOBILE ? 0.22 : 0.35);
 
                 ship.thrusting = input.up;
                 ship.reversing = input.down;
@@ -516,6 +558,7 @@
             if (l.x < 0 || l.x > canv.width || l.y < 0 || l.y > canv.height) ship.lasers.splice(i, 1);
         }
 
+        // UFO spawn and behavior unchanged
         if(!ufo.active && Math.random() < 0.002) spawnUFO();
         if(ufo.active) {
             ctx.drawImage(ufoImg, ufo.x - 25, ufo.y - 15, 50, 30);
@@ -604,12 +647,32 @@
     function updateScore() { document.getElementById("scoreEl").innerText = score; }
     
     function resizeCanvas() {
-        canv.width = window.innerWidth;
-        canv.height = window.innerHeight;
+        // keep canvas drawing buffer sized to device pixels for crispness
+        const DPR = window.devicePixelRatio || 1;
+        canv.width = Math.round(window.innerWidth * DPR);
+        canv.height = Math.round(window.innerHeight * DPR);
+        canv.style.width = '100vw';
+        canv.style.height = '100vh';
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
         stars = []; 
-        for(let i=0; i<100; i++) stars.push({x: Math.random()*canv.width, y: Math.random()*canv.height, size: Math.random()*2, alpha: Math.random()});
+        for(let i=0; i<100; i++) stars.push({x: Math.random()*canv.width/DPR, y: Math.random()*canv.height/DPR, size: Math.random()*2, alpha: Math.random()});
     }
     window.addEventListener('resize', resizeCanvas);
+
+    /* ========== BOOT & EVENT HOOKUP ========= */
+    // attach UI event listeners now that functions exist
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('fullscreenBtn').addEventListener('click', goFullscreen);
+    document.getElementById('pauseBtn').addEventListener('click', togglePause);
+    document.getElementById('pauseResumeBtn').addEventListener('click', togglePause);
+
+    // If mobile - hide pause button and ensure fullscreen button is prominent
+    if(IS_MOBILE){ const pauseBtn = document.getElementById('pauseBtn'); if(pauseBtn) pauseBtn.style.display = 'none'; }
+
+    // show start screen and hide UI until start
+    document.getElementById('start-screen').style.display = 'flex';
+    document.getElementById('ui-layer').style.display = 'none';
+    resizeCanvas();
 
 </script>
 </body>
