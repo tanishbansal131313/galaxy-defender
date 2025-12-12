@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GALAXY DEFENDER: UNIVERSAL</title>
+    <title>GALAXY DEFENDER: FIXED</title>
     <style>
         body {
             margin: 0;
@@ -25,7 +25,6 @@
             display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        /* STATS */
         #top-bar {
             padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none;
         }
@@ -34,13 +33,11 @@
         #powerup-msg { color: #ff0; font-weight: bold; display: none; animation: blink 0.5s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* PAUSE BUTTON */
         #pause-btn {
             pointer-events: auto; background: rgba(255, 255, 255, 0.2); border: 2px solid #fff;
             color: #fff; font-weight: bold; padding: 10px 15px; border-radius: 5px; cursor: pointer; backdrop-filter: blur(4px);
         }
 
-        /* SCREENS */
         #start-screen, #pause-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: flex; flex-direction: column;
@@ -59,14 +56,12 @@
 
         .paused-text { font-size: 50px; color: #fff; font-weight: bold; letter-spacing: 5px; }
 
-        /* MOBILE CONTROLS (Only visible on touch devices usually, but forced block for consistency here if needed) */
         #mobile-controls {
             display: none; 
             width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none;
         }
         @media (pointer: coarse) { #mobile-controls { display: block; } }
 
-        /* JOYSTICK */
         .joystick-area {
             position: absolute; bottom: 40px; left: 40px; width: 150px; height: 150px;
             background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);
@@ -78,7 +73,6 @@
             transform: translate(-50%, -50%); box-shadow: 0 0 10px #00d2ff; pointer-events: none;
         }
 
-        /* BUTTONS */
         .action-area {
             position: absolute; bottom: 40px; right: 40px; display: flex; gap: 20px; align-items: flex-end; pointer-events: none;
         }
@@ -132,7 +126,6 @@
     <canvas id="gameCanvas"></canvas>
 
 <script>
-    /** --- ASSETS --- */
     const SHIP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 2 L42 22 L62 36 L42 42 L42 54 L32 62 L22 54 L22 42 L2 36 L22 22 Z" fill="#e0e0e0" stroke="#333" stroke-width="2"/><path d="M32 2 L32 62" stroke="#999" stroke-width="1"/><path d="M22 42 L10 38 L22 28 Z" fill="#ff4500"/><path d="M42 42 L54 38 L42 28 Z" fill="#ff4500"/><circle cx="32" cy="28" r="4" fill="#00d2ff"/></svg>`;
     const ROID_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M10 20 L25 5 L45 10 L60 30 L50 55 L20 60 L5 40 Z" fill="#555" stroke="#222" stroke-width="2"/><path d="M15 25 L30 20 L25 40 Z" fill="#444"/><path d="M40 35 L50 45 L55 25 Z" fill="#333"/></svg>`;
     const UFO_SVG  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx="32" cy="32" rx="30" ry="12" fill="#d00" stroke="#fff" stroke-width="2"/><ellipse cx="32" cy="25" rx="15" ry="12" fill="#f00" stroke="#500" stroke-width="2"/><circle cx="15" cy="32" r="3" fill="#ff0"/><circle cx="32" cy="32" r="3" fill="#ff0"/><circle cx="49" cy="32" r="3" fill="#ff0"/></svg>`;
@@ -144,7 +137,7 @@
         return img;
     }
 
-    /* AUDIO SYSTEM */
+    /* AUDIO */
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let actx;
     function initAudio() { if(!actx) actx = new AudioContext(); if(actx.state === 'suspended') actx.resume(); }
@@ -176,7 +169,6 @@
         }
     }
 
-    /* GAME CONSTANTS */
     const FPS = 60;
     const FRICTION = 0.7;
     const SHIP_SIZE = 40;
@@ -187,34 +179,32 @@
     const GAME_LIVES = 3;
     const SHIP_INV_DUR = 3; 
 
-    /* SETUP */
     const canv = document.getElementById("gameCanvas");
     const ctx = canv.getContext("2d");
     const shipImg = svgToImg(SHIP_SVG);
     const roidImg = svgToImg(ROID_SVG);
     const ufoImg = svgToImg(UFO_SVG);
 
-    /* STATE VARIABLES */
     let level, roids, ship, ufo, score, lives, stars, particles, powerups;
     let gameRunning = false;
     let paused = false;
     let frameCount = 0;
+    let animationId; // KEY FIX: Track the loop ID
 
-    // --- UNIFIED INPUT SYSTEM ---
+    // INPUTS
     const input = { left: false, right: false, up: false, down: false };
 
-    /* EVENT LISTENERS */
     document.addEventListener("keydown", (ev) => {
         if(!gameRunning) return;
         switch(ev.keyCode) {
-            case 37: input.left = true; break; // Left Arrow
-            case 39: input.right = true; break; // Right Arrow
-            case 38: input.up = true; break; // Up Arrow
-            case 40: input.down = true; break; // Down Arrow
-            case 32: shootLaser(); break; // Space
-            case 16: hyperSpace(); break; // Shift
-            case 80: togglePause(); break; // P
-            case 13: if(ship.dead) newGame(); break; // Enter
+            case 37: input.left = true; break;
+            case 39: input.right = true; break;
+            case 38: input.up = true; break;
+            case 40: input.down = true; break;
+            case 32: shootLaser(); break;
+            case 16: hyperSpace(); break;
+            case 80: togglePause(); break;
+            case 13: if(ship.dead) newGame(); break; // Restart
         }
     });
 
@@ -228,7 +218,7 @@
         }
     });
 
-    // JOYSTICK LOGIC
+    // Joystick
     const joystick = document.getElementById("joystick");
     const stick = document.getElementById("stick");
     let stickDrag = false;
@@ -247,13 +237,11 @@
         const cy = rect.top + rect.height/2;
         let dx = touch.clientX - cx;
         let dy = touch.clientY - cy;
-        
         const dist = Math.sqrt(dx*dx + dy*dy);
         const maxDist = 35; 
         if(dist > maxDist) { dx *= maxDist/dist; dy *= maxDist/dist; }
         stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
-        // Update unified inputs from Touch
         input.right = dx > 10;
         input.left = dx < -10;
         input.up = dy < -10;
@@ -262,19 +250,9 @@
     function endStick(e) {
         stickDrag = false;
         stick.style.transform = `translate(-50%, -50%)`;
-        // Reset joystick inputs only, so keyboard doesn't get stuck if used simultaneously
-        if(!stickDrag) {
-            // Only reset if keys aren't pressed? 
-            // Simplified: Touch release clears flags. Keyboard listeners re-assert them if keys held.
-            // But to be safe, let's just clear the "touch" contribution. 
-            // For simplicity in this engine: release stick = stop stick movement.
-            // NOTE: If using mixed inputs, joystick release might stop key movement. 
-            // Ideally separate sources, but for simple fix:
-            input.left = input.right = input.up = input.down = false;
-        }
+        input.left = input.right = input.up = input.down = false;
     }
 
-    // Touch Buttons
     document.getElementById("btn-shoot").addEventListener('touchstart', (e) => { e.preventDefault(); shootLaser(); }, {passive: false});
     document.getElementById("btn-warp").addEventListener('touchstart', (e) => { e.preventDefault(); hyperSpace(); }, {passive: false});
 
@@ -295,10 +273,13 @@
         const pScreen = document.getElementById("pause-screen");
         const pBtn = document.getElementById("pause-btn");
         if(paused) { pScreen.style.display = "flex"; pBtn.style.display = "none"; } 
-        else { pScreen.style.display = "none"; pBtn.style.display = "block"; requestAnimationFrame(update); }
+        else { pScreen.style.display = "none"; pBtn.style.display = "block"; animationId = requestAnimationFrame(update); }
     }
 
     function newGame() {
+        // KEY FIX: STOP OLD LOOP
+        if(animationId) cancelAnimationFrame(animationId);
+        
         level = 0; lives = GAME_LIVES; score = 0;
         ship = newShip();
         ufo = { active: false, x: 0, y: 0, xv: 0, yv: 0, timer: 0, bullets: [] };
@@ -306,7 +287,9 @@
         particles = []; powerups = [];
         updateScore();
         document.getElementById("livesEl").innerText = lives;
-        requestAnimationFrame(update);
+        
+        // START NEW LOOP
+        animationId = requestAnimationFrame(update);
     }
 
     function newShip() {
@@ -388,16 +371,13 @@
         if(!gameRunning || paused) return;
         frameCount++;
 
-        // Draw Background
         ctx.fillStyle = "black"; ctx.fillRect(0, 0, canv.width, canv.height);
         ctx.fillStyle = "white"; stars.forEach(s => { ctx.globalAlpha = s.alpha; ctx.fillRect(s.x, s.y, s.size, s.size); });
         ctx.globalAlpha = 1.0;
 
-        // --- SHIP LOGIC ---
         if (!ship.dead) {
             document.getElementById("powerup-msg").style.display = (ship.tripleShot-- > 0) ? "block" : "none";
 
-            // Apply Unified Input to Ship
             if(!ship.frozen) {
                 if(input.left) ship.rot = -TURN_SPEED / 180 * Math.PI / FPS;
                 else if(input.right) ship.rot = TURN_SPEED / 180 * Math.PI / FPS;
@@ -427,11 +407,9 @@
                 }
             }
             
-            // Wrap
             if (ship.x < -20) ship.x = canv.width + 20; else if (ship.x > canv.width + 20) ship.x = -20;
             if (ship.y < -20) ship.y = canv.height + 20; else if (ship.y > canv.height + 20) ship.y = -20;
 
-            // Draw
             if(ship.blinkNum > 0) { ship.blinkTime--; if(ship.blinkTime == 0) { ship.blinkTime = Math.ceil(0.1*FPS); ship.blinkNum--; } }
             
             if(ship.blinkNum % 2 == 0) {
@@ -441,7 +419,6 @@
                     ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0,0, 30, 0, Math.PI*2); ctx.stroke(); 
                 }
                 ctx.restore();
-                // Ice
                 if(ship.frozen) {
                     ctx.save(); ctx.translate(ship.x, ship.y);
                     ctx.fillStyle = "rgba(150, 230, 255, 0.6)"; ctx.strokeStyle = "white"; ctx.lineWidth = 2;
@@ -457,7 +434,6 @@
             }
         }
 
-        // --- ENTITIES ---
         for(let i=powerups.length-1; i>=0; i--) {
             let p = powerups[i];
             ctx.fillStyle = p.type == 'S' ? '#00f' : '#ff0';
@@ -538,7 +514,7 @@
             ctx.font = "20px Arial"; ctx.fillText("Tap to Restart", canv.width/2, canv.height/2+40);
             if(input.left || input.right || input.up || input.down) newGame(); 
         }
-        requestAnimationFrame(update);
+        animationId = requestAnimationFrame(update);
     }
 
     function destroyRoid(i) {
